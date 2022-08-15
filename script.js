@@ -122,6 +122,36 @@ var checkValueOfHand = function (hand) {
 };
 
 //=============================================
+//function to output cards in hand as string
+var handToString = function (hand) {
+  //initialise empty output
+  var handToStringOutput = "";
+
+  //loop to output each card in player's hand
+  var cardIndex = 0;
+  while (cardIndex < hand.length) {
+    handToStringOutput += `${hand[cardIndex].name} of ${hand[cardIndex].suit}`;
+    //punctuation
+    if (cardIndex < hand.length - 2) {
+      handToStringOutput += ", ";
+    } else if (cardIndex == hand.length - 2) {
+      handToStringOutput += " and ";
+    }
+    cardIndex += 1;
+  }
+  return handToStringOutput;
+};
+
+//=============================================
+//func to list out point values
+var listPoints = function () {
+  var listPointsOutput = `You have ${checkValueOfHand(
+    playerHand
+  )} points and dealer has ${checkValueOfHand(dealerHand)} points.<br>`;
+  return listPointsOutput;
+};
+
+//=============================================
 //check for blackjack func
 var checkForBlackjack = function (hand) {
   var blackjack = false;
@@ -129,6 +159,23 @@ var checkForBlackjack = function (hand) {
     blackjack = true;
   }
   return blackjack;
+};
+
+//============================================
+//function for dealer to autohit if below 17
+var autoHitIfBelow17 = function (hand) {
+  valueOfHand = checkValueOfHand(hand);
+  //loop to keep drawing until value of hand >= 17
+  while (valueOfHand < 17) {
+    //==============================================
+    //TEMPORARY MEASURE: break loop if deck is empty to avoid infinite loop
+    //==============================================
+    if (deck == []) {
+      break;
+    }
+    hand.push(deck.pop());
+    valueOfHand = checkValueOfHand(hand);
+  }
 };
 
 //=============================================
@@ -151,7 +198,6 @@ var dealStartingHand = function () {
   if (deck.length < cardsNeeded) {
     deck = shuffleCards(makeDeck());
     dealStartingHandOutput = "Deck reshuffled.<br>";
-    console.log("Deck reshuffled");
   }
 
   //loop to deal two cards per person, starting with player
@@ -161,14 +207,59 @@ var dealStartingHand = function () {
     dealerHand.push(deck.pop());
     counter += 1;
   }
-
-  dealStartingHandOutput += "Hand dealt. Click 'Submit' again to see results.";
   console.log("player hand:");
   console.log(playerHand);
   console.log("dealer hand:");
   console.log(dealerHand);
 
+  //output both players' hands
+  dealStartingHandOutput = `You drew ${handToString(
+    playerHand
+  )}.<br>Dealer drew ${handToString(dealerHand)}.<br>`;
+
+  //check for blackjack
+  var playerBlackjack = checkForBlackjack(playerHand);
+  var dealerBlackjack = checkForBlackjack(dealerHand);
+
+  //split by cases of who has blackjack
+  if (playerBlackjack == true && dealerBlackjack == true) {
+    dealStartingHandOutput +=
+      "Both you and the dealer have blackjack!<br>It's a draw!";
+  } else if (playerBlackjack == true && dealerBlackjack == false) {
+    dealStartingHandOutput += "You have blackjack! You win!";
+  } else if (playerBlackjack == false && dealerBlackjack == true) {
+    dealStartingHandOutput += "Dealer has blackjack! Dealer wins.";
+  }
+  //if no one has blackjack, output values of hands and ask player for hit or stand
+  else {
+    dealStartingHandOutput += listPoints();
+    dealStartingHandOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+  }
+
   return dealStartingHandOutput;
+};
+
+//=============================================
+//function for player's turn
+var playerTurn = function (input) {
+  //initialise empty output
+  var playerTurnOutput = "";
+
+  //check value of hand
+  playerRank = checkValueOfHand(playerHand);
+
+  //split cases if input is hit or stand
+  if (input == "hit") {
+    //draw a card
+    playerHand.push(deck.pop());
+    //refresh value of hand
+    playerRank = checkValueOfHand(playerHand);
+
+    //output
+    playerTurnOutput = `You drew ${playerHand[playerHand.length - 1].name} of ${
+      playerHand[playerHand.length - 1].suit
+    }.<br>`;
+  }
 };
 
 //=============================================
@@ -185,30 +276,20 @@ var finalResults = function () {
   var playerBlackjack = checkForBlackjack(playerHand);
   var dealerBlackjack = checkForBlackjack(dealerHand);
 
-  //output both players' hands and scores
-  finalResultsOutput = `You drew ${playerHand[0].name} of ${playerHand[0].suit} and ${playerHand[1].name} of ${playerHand[1].suit}.<br>Dealer drew ${dealerHand[0].name} of ${dealerHand[0].suit} and ${dealerHand[1].name} of ${dealerHand[1].suit}.<br>`;
+  //output both players' hands
+  finalResultsOutput = `You have ${handToString(
+    playerHand
+  )}.<br>Dealer has ${handToString(dealerHand)}.<br>`;
 
-  //split by cases of who has blackjack
-  if (playerBlackjack == true && dealerBlackjack == true) {
-    finalResultsOutput +=
-      "Both you and the dealer have blackjack!<br>It's a draw!";
-  } else if (playerBlackjack == true && dealerBlackjack == false) {
-    finalResultsOutput += "You have blackjack! You win!";
-  } else if (playerBlackjack == false && dealerBlackjack == true) {
-    finalResultsOutput += "Dealer has blackjack! Dealer wins.";
-  }
-  //if no one has blackjack, compare values of hands
-  else {
-    //output both players' hand values
-    finalResultsOutput += `You have ${playerRank} points and dealer has ${dealerRank} points.<br>`;
-    if (playerRank > dealerRank) {
-      //different output depending on who wins
-      finalResultsOutput += "You win!";
-    } else if (playerRank < dealerRank) {
-      finalResultsOutput += "Dealer wins.";
-    } else {
-      finalResultsOutput += "It's a draw.";
-    }
+  //output both players' hand values
+  finalResultsOutput += `You have ${playerRank} points and dealer has ${dealerRank} points.<br>`;
+  if (playerRank > dealerRank) {
+    //different output depending on who wins
+    finalResultsOutput += "You win!";
+  } else if (playerRank < dealerRank) {
+    finalResultsOutput += "Dealer wins.";
+  } else {
+    finalResultsOutput += "It's a draw.";
   }
 
   finalResultsOutput += "<br> Click 'Submit' to play again!";
@@ -227,23 +308,21 @@ console.log("deck generated");
 
 //main
 var main = function (input) {
+  //initialise empty output
   var myOutputValue = "";
+  //console log mode
+  console.log("========================");
+  console.log("mode:" + mode);
+
   //deal starting hand
   if (mode == "dealStartingHand") {
-    //console log mode
-    console.log("========================");
-    console.log("mode:" + mode);
-
     //output
     myOutputValue = dealStartingHand();
 
     //change mode
-    mode = "finalResults";
+    mode = "playerTurn";
+  } else if ((mode = "playerTurn")) {
   } else if (mode == "finalResults") {
-    //console log mode
-    console.log("========================");
-    console.log("mode:" + mode);
-
     //output
     myOutputValue = finalResults();
 
