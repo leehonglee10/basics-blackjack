@@ -224,16 +224,20 @@ var dealStartingHand = function () {
   //split by cases of who has blackjack
   if (playerBlackjack == true && dealerBlackjack == true) {
     dealStartingHandOutput +=
-      "Both you and the dealer have blackjack!<br>It's a draw!";
+      "Both you and the dealer have blackjack!<br>It's a draw!<br>Click 'Submit' to play again!";
   } else if (playerBlackjack == true && dealerBlackjack == false) {
     dealStartingHandOutput += "You have blackjack! You win!";
   } else if (playerBlackjack == false && dealerBlackjack == true) {
     dealStartingHandOutput += "Dealer has blackjack! Dealer wins.";
   }
+  //mode remains dealStartingHand
+
   //if no one has blackjack, output values of hands and ask player for hit or stand
   else {
-    dealStartingHandOutput += listPoints();
-    dealStartingHandOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+    dealStartingHandOutput += `${listPoints()}<br>Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+
+    //change mode
+    mode = "playerTurn";
   }
 
   return dealStartingHandOutput;
@@ -245,21 +249,39 @@ var playerTurn = function (input) {
   //initialise empty output
   var playerTurnOutput = "";
 
-  //check value of hand
-  playerRank = checkValueOfHand(playerHand);
-
   //split cases if input is hit or stand
   if (input == "hit") {
     //draw a card
     playerHand.push(deck.pop());
-    //refresh value of hand
-    playerRank = checkValueOfHand(playerHand);
 
     //output
-    playerTurnOutput = `You drew ${playerHand[playerHand.length - 1].name} of ${
-      playerHand[playerHand.length - 1].suit
-    }.<br>`;
+    playerTurnOutput =
+      `You drew ${playerHand[playerHand.length - 1].name} of ${
+        playerHand[playerHand.length - 1].suit
+      }.<br>` +
+      `You have ${handToString(playerHand)}.<br>` +
+      `${listPoints()}<br>`;
+
+    //if busted, let player know and change mode
+    if (checkValueOfHand(playerHand) > 21) {
+      playerTurnOutput += `You've busted! Click 'Submit' to move on to dealer's turn.`;
+      mode = "dealerTurn";
+    }
+    //else ask player for hit or stand, and leave mode unchanged
+    else {
+      playerTurnOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+    }
   }
+  //if stand, output final value of hand and change mode
+  else if (input == "stand") {
+    playerTurnOutput = `You stood. You have ${handToString(
+      playerHand
+    )} and dealer has ${handToString(
+      dealerHand
+    )}.<br>${listPoints()}<br>Click 'Submit' to move on to dealer's turn.`;
+    mode = "dealerTurn";
+  }
+  return playerTurnOutput;
 };
 
 //=============================================
@@ -318,10 +340,10 @@ var main = function (input) {
   if (mode == "dealStartingHand") {
     //output
     myOutputValue = dealStartingHand();
-
-    //change mode
-    mode = "playerTurn";
   } else if ((mode = "playerTurn")) {
+    myOutputValue = playerTurn(input);
+  } else if ((mode = "dealerTurn")) {
+    myOutputValue = dealerTurn();
   } else if (mode == "finalResults") {
     //output
     myOutputValue = finalResults();
