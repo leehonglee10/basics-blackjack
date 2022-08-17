@@ -143,12 +143,14 @@ var handToString = function (hand) {
 };
 
 //=============================================
-//func to list out point values
-var listPoints = function () {
-  var listPointsOutput = `You have ${checkValueOfHand(
+//func to list out hands and point values
+var listHands = function () {
+  var listHandsOutput = `Your hand: ${handToString(
     playerHand
-  )} points and dealer has ${checkValueOfHand(dealerHand)} points.<br>`;
-  return listPointsOutput;
+  )} (${checkValueOfHand(playerHand)} points)<br>Dealer hand: ${handToString(
+    dealerHand
+  )} (${checkValueOfHand(dealerHand)} points)<br><br>`;
+  return listHandsOutput;
 };
 
 //=============================================
@@ -182,16 +184,14 @@ var checkForBust = function (hand) {
 var dealStartingHand = function () {
   //initialise empty output
   var dealStartingHandOutput = "";
+
   //reset hands
   playerHand = [];
   dealerHand = [];
 
-  //if deck has less cards than needed to deal, generate a new deck
-  var cardsNeeded = 4;
-  if (deck.length < cardsNeeded) {
-    deck = shuffleCards(makeDeck());
-    dealStartingHandOutput = "Deck reshuffled.<br>";
-  }
+  //reset deck
+  deck = shuffleCards(makeDeck());
+  console.log("deck generated");
 
   //loop to deal two cards per person, starting with player
   var counter = 0;
@@ -206,9 +206,7 @@ var dealStartingHand = function () {
   console.log(dealerHand);
 
   //output both players' hands
-  dealStartingHandOutput = `You drew ${handToString(
-    playerHand
-  )}.<br>Dealer drew ${handToString(dealerHand)}.<br>`;
+  dealStartingHandOutput = listHands();
 
   //check for blackjack
   var playerBlackjack = checkForBlackjack(playerHand);
@@ -229,7 +227,7 @@ var dealStartingHand = function () {
 
   //if no one has blackjack, output values of hands and ask player for hit or stand
   else {
-    dealStartingHandOutput += `${listPoints()}<br>Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+    dealStartingHandOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
 
     //change mode
     mode = "playerTurn";
@@ -244,22 +242,25 @@ var playerTurn = function (input) {
   //initialise empty output
   var playerTurnOutput = "";
 
+  //input validation
+  if (input !== "hit" && input !== "stand") {
+    playerTurnOutput += `Sorry, please input either 'hit' or 'stand'.<br><br>${listHands()}`;
+  }
   //split cases if input is hit or stand
-  if (input == "hit") {
+  else if (input == "hit") {
     //draw a card
     playerHand.push(deck.pop());
 
     //output
-    playerTurnOutput =
-      `You hit and drew ${playerHand[playerHand.length - 1].name} of ${
-        playerHand[playerHand.length - 1].suit
-      }.<br>` +
-      `You have ${handToString(playerHand)}.<br>` +
-      `${listPoints()}<br>`;
+    playerTurnOutput += `You hit and drew ${
+      playerHand[playerHand.length - 1].name
+    } of ${playerHand[playerHand.length - 1].suit}.<br><br>`;
+
+    playerTurnOutput += listHands();
 
     //if busted, let player know and change mode
     if (checkValueOfHand(playerHand) > 21) {
-      playerTurnOutput += `You've busted! Click 'Submit' to move on to dealer's turn.`;
+      playerTurnOutput += `You busted! Click 'Submit' to move on to dealer's turn.`;
       mode = "dealerTurn";
     }
     //else ask player for hit or stand, and leave mode unchanged
@@ -269,11 +270,7 @@ var playerTurn = function (input) {
   }
   //if stand, output final value of hand and change mode
   else if (input == "stand") {
-    playerTurnOutput = `You stood. You have ${handToString(
-      playerHand
-    )} and dealer has ${handToString(
-      dealerHand
-    )}.<br>${listPoints()}<br>Click 'Submit' to move on to dealer's turn.`;
+    playerTurnOutput = `You stood.<br><br>${listHands()}Click 'Submit' to move on to dealer's turn.`;
     mode = "dealerTurn";
   }
   return playerTurnOutput;
@@ -286,31 +283,27 @@ var dealerTurn = function () {
   //initialise empty output
   dealerTurnOutput = "";
 
-  //output dealer's inital hand
-  dealerTurnOutput += `Dealer has ${handToString(
-    dealerHand
-  )}, worth ${checkValueOfHand(dealerHand)} points.<br>`;
-
   //loop to keep drawing until value of hand >= 17
   while (checkValueOfHand(dealerHand) < 17) {
-    //==============================================
-    //TEMPORARY MEASURE: break loop if deck is empty to avoid infinite loop
-    //==============================================
-    if (deck == []) {
-      break;
-    }
     dealerHand.push(deck.pop());
   }
 
   //add output for cards dealer drew
   if (dealerHand.length > 2) {
     var newCards = dealerHand.slice(2, dealerHand.length);
-    dealerTurnOutput += `Dealer drew ${handToString(
+    dealerTurnOutput += `Dealer hit and drew ${handToString(
       newCards
-    )}, and now has ${checkValueOfHand(dealerHand)} points.<br>`;
-    if (checkValueOfHand(dealerHand) > 21) {
-      dealerTurnOutput += "Dealer busted!<br>";
-    }
+    )}.<br><br>`;
+  } else {
+    dealerTurnOutput += `Dealer stood.<br><br>`;
+  }
+
+  //list hands
+  dealerTurnOutput += listHands();
+
+  //if dealer busted
+  if (checkValueOfHand(dealerHand) > 21) {
+    dealerTurnOutput += "Dealer busted!<br>";
   }
 
   //tell player to move on to final results
@@ -333,12 +326,7 @@ var finalResults = function () {
   var dealerRank = checkValueOfHand(dealerHand);
 
   //output both players' hands
-  finalResultsOutput = `You have ${handToString(
-    playerHand
-  )}.<br>Dealer has ${handToString(dealerHand)}.<br>`;
-
-  //output both players' hand values
-  finalResultsOutput += listPoints();
+  finalResultsOutput = listHands();
 
   //check for bust
   playerBust = checkForBust(playerHand);
@@ -370,10 +358,6 @@ var finalResults = function () {
 //MAIN
 //=============================================
 //=============================================
-
-//first, make a deck
-deck = shuffleCards(makeDeck());
-console.log("deck generated");
 
 //main
 var main = function (input) {
