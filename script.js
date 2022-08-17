@@ -174,6 +174,43 @@ var checkForBust = function (hand) {
 };
 
 //=============================================
+//func to check hand for aces (subhelper for changeFirstAceTo1)
+var handHasAceWorth11 = function (hand) {
+  var ace = false;
+  //loop to check through all cards in hand
+  var cardIndex = 0;
+  while (cardIndex < hand.length) {
+    if (hand[cardIndex].name == "ace" && hand[cardIndex].rank == 11) {
+      ace = true;
+    }
+    cardIndex += 1;
+  }
+  return ace;
+};
+
+//=============================================
+//func to find aces worth 11 points (subhelper for changeFirstAceTo1)
+var indexOfAceWorth11 = function (card) {
+  if (card.rank == 11 && card.name == "ace") {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+//=============================================
+//func to change value of ace to 1 if hand is bust
+var changeFirstAceTo1 = function (hand) {
+  //break if hand has no ace worth 11 to change
+  if (!handHasAceWorth11(hand)) {
+    return;
+  }
+  //find first ace worth 11 and change to 1
+  aceIndex = hand.findIndex(indexOfAceWorth11);
+  hand[aceIndex].rank = 1;
+};
+
+//=============================================
 //=============================================
 //GAME MODE FUNCS
 //=============================================
@@ -256,6 +293,11 @@ var playerTurn = function (input) {
       playerHand[playerHand.length - 1].name
     } of ${playerHand[playerHand.length - 1].suit}.<br><br>`;
 
+    //if bust, try changing ace to 1
+    if (checkValueOfHand(playerHand) > 21) {
+      changeFirstAceTo1(playerHand);
+    }
+
     playerTurnOutput += listHands();
 
     //if busted, let player know and change mode
@@ -298,6 +340,10 @@ var dealerTurn = function () {
     dealerTurnOutput += `Dealer stood.<br><br>`;
   }
 
+  //if bust, try changing ace to 1
+  if (checkValueOfHand(dealerHand) > 21) {
+    changeFirstAceTo1(dealerHand);
+  }
   //list hands
   dealerTurnOutput += listHands();
 
