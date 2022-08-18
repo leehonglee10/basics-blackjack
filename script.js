@@ -16,7 +16,7 @@ var makeDeck = function () {
   // Initialise an empty deck array
   var cardDeck = [];
   // Initialise an array of the 4 suits in our deck. We will loop over this array.
-  var suits = ["hearts", "diamonds", "clubs", "spades"];
+  var suits = ["❤️", "♦️", "♣️", "♠️"];
 
   // Loop over the suits array
   var suitIndex = 0;
