@@ -2,6 +2,10 @@
 var playerHand = [];
 var dealerHand = [];
 var deck = [];
+var playerChips = 100;
+var playerBet = 0;
+var minimumBet = 10;
+//please change the minimum bet in the initial output in index.html
 var mode = "dealStartingHand";
 
 //==========================================
@@ -218,9 +222,28 @@ var changeFirstAceTo1 = function (hand) {
 
 //=============================================
 //deal starting hand func
-var dealStartingHand = function () {
+var dealStartingHand = function (bet) {
   //initialise empty output
   var dealStartingHandOutput = "";
+
+  //set playerBet
+  playerBet = Number(bet);
+
+  //input validation for bet, cannot be non-integer, less than minimum bet, more than current chips, or NaN
+  if (
+    playerBet % 1 !== 0 ||
+    playerBet < minimumBet ||
+    playerBet > playerChips ||
+    isNaN(playerBet)
+  ) {
+    return `Sorry, please input an integer  greater than ${minimumBet} and less than your remaining chips.<br><br>You have ${playerChips} chips remaining.`;
+  } else {
+    //minus playerBet away from playerChips
+    playerChips -= playerBet;
+
+    //output bet
+    dealStartingHandOutput += `You've bet ${playerBet} chips.<br>You have ${playerChips} chips remaining.<br><br>`;
+  }
 
   //reset hands
   playerHand = [];
@@ -243,25 +266,37 @@ var dealStartingHand = function () {
   console.log(dealerHand);
 
   //output both players' hands
-  dealStartingHandOutput = listHands();
+  dealStartingHandOutput += listHands();
 
   //check for blackjack
   var playerBlackjack = checkForBlackjack(playerHand);
   var dealerBlackjack = checkForBlackjack(dealerHand);
 
-  //split by cases of who has blackjack
-  if (playerBlackjack == true && dealerBlackjack == true) {
-    dealStartingHandOutput +=
-      "Both you and the dealer have blackjack! It's a draw!<br>Click 'Submit' to play again!";
-  } else if (playerBlackjack == true && dealerBlackjack == false) {
-    dealStartingHandOutput +=
-      "You have blackjack! You win!<br>Click 'Submit' to play again!";
-  } else if (playerBlackjack == false && dealerBlackjack == true) {
-    dealStartingHandOutput +=
-      "Dealer has blackjack! Dealer wins.<br>Click 'Submit' to play again!";
-  }
-  //mode remains dealStartingHand
+  //if anyone has blackjack
+  if (playerBlackjack == true || dealerBlackjack == true) {
+    //split by cases of who has blackjack
+    if (playerBlackjack == true && dealerBlackjack == true) {
+      playerChips += playerBet;
+      dealStartingHandOutput += `Both you and the dealer have blackjack! It's a draw!`;
+    } else if (playerBlackjack == true && dealerBlackjack == false) {
+      playerChips += 3 * playerBet;
+      dealStartingHandOutput += `You have blackjack! You win!`;
+    } else if (playerBlackjack == false && dealerBlackjack == true) {
+      playerChips -= playerBet;
+      dealStartingHandOutput += `Dealer has blackjack! Dealer wins.`;
+    }
 
+    //check if player ran out of chips
+    if (playerChips <= 0) {
+      //change mode
+      mode = "gameOver";
+      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>You've run out of chips!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
+      return dealStartingHandOutput;
+    } else {
+      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>Input your bet and click 'Submit' to play again!`;
+    }
+    //mode remains dealStartingHand
+  }
   //if no one has blackjack, output values of hands and ask player for hit or stand
   else {
     dealStartingHandOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
@@ -328,6 +363,10 @@ var dealerTurn = function () {
   //loop to keep drawing until value of hand >= 17
   while (checkValueOfHand(dealerHand) < 17) {
     dealerHand.push(deck.pop());
+    //if bust, try changing ace to 1
+    if (checkValueOfHand(dealerHand) > 21) {
+      changeFirstAceTo1(dealerHand);
+    }
   }
 
   //add output for cards dealer drew
@@ -340,10 +379,6 @@ var dealerTurn = function () {
     dealerTurnOutput += `Dealer stood.<br><br>`;
   }
 
-  //if bust, try changing ace to 1
-  if (checkValueOfHand(dealerHand) > 21) {
-    changeFirstAceTo1(dealerHand);
-  }
   //list hands
   dealerTurnOutput += listHands();
 
@@ -380,22 +415,35 @@ var finalResults = function () {
 
   //scenarios for bust
   if (playerBust == true && dealerBust == true) {
-    finalResultsOutput += "Both you and the dealer busted! It's a draw!<br>";
+    playerChips += playerBet;
+    finalResultsOutput += "Both you and the dealer busted! It's a draw!";
   } else if (playerBust == true && dealerBust == false) {
-    finalResultsOutput += "You busted! Dealer wins.<br>";
+    finalResultsOutput += "You busted! Dealer wins.";
   } else if (playerBust == false && dealerBust == true) {
-    finalResultsOutput += "Dealer has busted! You win!<br>";
+    playerChips += 2 * playerBet;
+    finalResultsOutput += "Dealer has busted! You win!";
   } else {
     if (playerRank > dealerRank) {
+      playerChips += 2 * playerBet;
       //different output depending on who wins
-      finalResultsOutput += "You win!<br>";
+      finalResultsOutput += "You win!";
     } else if (playerRank < dealerRank) {
-      finalResultsOutput += "Dealer wins.<br>";
+      finalResultsOutput += "Dealer wins.";
     } else {
-      finalResultsOutput += "It's a draw.<br>";
+      playerChips += playerBet;
+      finalResultsOutput += "It's a draw.";
     }
   }
-  finalResultsOutput += "Click 'Submit' to play again!";
+  //check if player ran out of chips
+  if (playerChips <= 0) {
+    //change mode
+    mode = "gameOver";
+    finalResultsOutput += `<br><br>You have ${playerChips} chips remaining.<br>You've run out of chips!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
+  } else {
+    //change mode
+    mode = "dealStartingHand";
+    finalResultsOutput += `<br>You have ${playerChips} chips remaining.<br>Input your bet and click 'Submit' to play again!`;
+  }
   return finalResultsOutput;
 };
 
@@ -416,16 +464,16 @@ var main = function (input) {
   //deal starting hand
   if (mode == "dealStartingHand") {
     //output
-    myOutputValue = dealStartingHand();
+    myOutputValue = dealStartingHand(input);
   } else if (mode == "playerTurn") {
     myOutputValue = playerTurn(input);
   } else if (mode == "dealerTurn") {
     myOutputValue = dealerTurn();
   } else if (mode == "finalResults") {
     myOutputValue = finalResults();
-
-    //change mode
-    mode = "dealStartingHand";
+  } else if (mode == "gameOver") {
+    myOutputValue =
+      "You've run out of chips. Please refresh the page to start again.";
   }
   return myOutputValue;
 };
