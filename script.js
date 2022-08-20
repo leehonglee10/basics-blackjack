@@ -134,12 +134,31 @@ var handToString = function (hand) {
   //loop to output each card in player's hand
   var cardIndex = 0;
   while (cardIndex < hand.length) {
-    handToStringOutput += `${hand[cardIndex].name} of ${hand[cardIndex].suit}`;
+    handToStringOutput += `    ${hand[cardIndex].name} of ${hand[cardIndex].suit}    `;
     //punctuation
-    if (cardIndex < hand.length - 2) {
+    if (cardIndex < hand.length - 1) {
       handToStringOutput += ", ";
-    } else if (cardIndex == hand.length - 2) {
-      handToStringOutput += " and ";
+    }
+    cardIndex += 1;
+  }
+  return handToStringOutput;
+};
+
+//=============================================
+//function to output cards in hand as string HIDING DEALER'S FIRST CARD
+var handToStringDealerCardHidden = function (hand) {
+  //initialise empty output
+  var handToStringOutput = "";
+
+  //set first card as unknown
+  handToStringOutput += `    ⬛ of ⬛    ,`;
+  //loop to output each card in player's hand. cardIndex starts from 1 because first card hidden.
+  var cardIndex = 1;
+  while (cardIndex < hand.length) {
+    handToStringOutput += `    ${hand[cardIndex].name} of ${hand[cardIndex].suit}    `;
+    //punctuation
+    if (cardIndex < hand.length - 1) {
+      handToStringOutput += ", ";
     }
     cardIndex += 1;
   }
@@ -154,6 +173,20 @@ var listHands = function () {
   )} (${checkValueOfHand(playerHand)} points)<br>Dealer hand: ${handToString(
     dealerHand
   )} (${checkValueOfHand(dealerHand)} points)<br><br>`;
+
+  return listHandsOutput;
+};
+
+//=============================================
+//func to list out hands and point values HIDING DEALER FIRST CARD
+var listHandsDealerCardHidden = function () {
+  var listHandsOutput = `Your hand: ${handToString(
+    playerHand
+  )} (${checkValueOfHand(
+    playerHand
+  )} points)<br>Dealer hand: ${handToStringDealerCardHidden(
+    dealerHand
+  )} (??? points)<br><br>`;
   return listHandsOutput;
 };
 
@@ -165,16 +198,6 @@ var checkForBlackjack = function (hand) {
     blackjack = true;
   }
   return blackjack;
-};
-
-//=============================================
-//check for bust func
-var checkForBust = function (hand) {
-  var bust = false;
-  if (checkValueOfHand(hand) > 21) {
-    bust = true;
-  }
-  return bust;
 };
 
 //=============================================
@@ -233,10 +256,10 @@ var dealStartingHand = function (bet) {
   if (
     playerBet % 1 !== 0 ||
     playerBet < minimumBet ||
-    playerBet > playerChips ||
+    playerBet > 0.5 * playerChips ||
     isNaN(playerBet)
   ) {
-    return `Sorry, please input an integer  greater than ${minimumBet} and less than your remaining chips.<br><br>You have ${playerChips} chips remaining.`;
+    return `Sorry, please input an integer  greater than ${minimumBet} and less than half your remaining chips.<br><br>You have ${playerChips} chips remaining.`;
   } else {
     //minus playerBet away from playerChips
     playerChips -= playerBet;
@@ -265,12 +288,16 @@ var dealStartingHand = function (bet) {
   console.log("dealer hand:");
   console.log(dealerHand);
 
-  //output both players' hands
-  dealStartingHandOutput += listHands();
-
   //check for blackjack
   var playerBlackjack = checkForBlackjack(playerHand);
   var dealerBlackjack = checkForBlackjack(dealerHand);
+
+  //output both players' hands, hiding dealer card if no blackjack
+  if (dealerBlackjack) {
+    dealStartingHandOutput += listHands();
+  } else {
+    dealStartingHandOutput += listHandsDealerCardHidden();
+  }
 
   //if anyone has blackjack
   if (playerBlackjack == true || dealerBlackjack == true) {
@@ -287,15 +314,16 @@ var dealStartingHand = function (bet) {
     }
 
     //check if player ran out of chips
-    if (playerChips <= 0) {
+    if (playerChips <= minimumBet) {
       //change mode
       mode = "gameOver";
-      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>You've run out of chips!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
-      return dealStartingHandOutput;
+      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>You don't have enough chips to place another bet!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
     } else {
-      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>Input your bet and click 'Submit' to play again!`;
+      //mode remains dealStartingHand
+      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>Input your bet (between ${minimumBet} and ${Math.floor(
+        0.5 * playerChips
+      )}) and click 'Submit' to play again!`;
     }
-    //mode remains dealStartingHand
   }
   //if no one has blackjack, output values of hands and ask player for hit or stand
   else {
@@ -316,7 +344,7 @@ var playerTurn = function (input) {
 
   //input validation
   if (input !== "hit" && input !== "stand") {
-    playerTurnOutput += `Sorry, please input either 'hit' or 'stand'.<br><br>${listHands()}`;
+    playerTurnOutput += `Sorry, please input either 'hit' or 'stand'.<br><br>${listHandsDealerCardHidden()}`;
   }
   //split cases if input is hit or stand
   else if (input == "hit") {
@@ -333,12 +361,23 @@ var playerTurn = function (input) {
       changeFirstAceTo1(playerHand);
     }
 
-    playerTurnOutput += listHands();
+    playerTurnOutput += listHandsDealerCardHidden();
 
-    //if busted, let player know and change mode
+    //if busted, lose
     if (checkValueOfHand(playerHand) > 21) {
-      playerTurnOutput += `You busted! Click 'Submit' to move on to dealer's turn.`;
-      mode = "dealerTurn";
+      playerTurnOutput += `You busted! Dealer wins.`;
+      //check if player ran out of chips
+      if (playerChips <= minimumBet) {
+        //change mode
+        mode = "gameOver";
+        playerTurnOutput += `<br><br>You have ${playerChips} chips remaining.<br>You don't have enough chips to place another bet!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
+      } else {
+        //change mode
+        mode = "dealStartingHand";
+        playerTurnOutput += `<br><br>You have ${playerChips} chips remaining.<br>Please place your bet for the next round! (between ${minimumBet} and ${Math.floor(
+          0.5 * playerChips
+        )})`;
+      }
     }
     //else ask player for hit or stand, and leave mode unchanged
     else {
@@ -347,7 +386,7 @@ var playerTurn = function (input) {
   }
   //if stand, output final value of hand and change mode
   else if (input == "stand") {
-    playerTurnOutput = `You stood.<br><br>${listHands()}Click 'Submit' to move on to dealer's turn.`;
+    playerTurnOutput = `You stood.<br><br>${listHandsDealerCardHidden()}Click 'Submit' to move on to dealer's turn.`;
     mode = "dealerTurn";
   }
   return playerTurnOutput;
@@ -368,7 +407,6 @@ var dealerTurn = function () {
       changeFirstAceTo1(dealerHand);
     }
   }
-
   //add output for cards dealer drew
   if (dealerHand.length > 2) {
     var newCards = dealerHand.slice(2, dealerHand.length);
@@ -380,12 +418,7 @@ var dealerTurn = function () {
   }
 
   //list hands
-  dealerTurnOutput += listHands();
-
-  //if dealer busted
-  if (checkValueOfHand(dealerHand) > 21) {
-    dealerTurnOutput += "Dealer busted!<br>";
-  }
+  dealerTurnOutput += listHandsDealerCardHidden();
 
   //tell player to move on to final results
   dealerTurnOutput += "Click 'Submit' to check final results.";
@@ -409,17 +442,8 @@ var finalResults = function () {
   //output both players' hands
   finalResultsOutput = listHands();
 
-  //check for bust
-  playerBust = checkForBust(playerHand);
-  dealerBust = checkForBust(dealerHand);
-
-  //scenarios for bust
-  if (playerBust == true && dealerBust == true) {
-    playerChips += playerBet;
-    finalResultsOutput += "Both you and the dealer busted! It's a draw!";
-  } else if (playerBust == true && dealerBust == false) {
-    finalResultsOutput += "You busted! Dealer wins.";
-  } else if (playerBust == false && dealerBust == true) {
+  //if dealer bust
+  if (dealerRank > 21) {
     playerChips += 2 * playerBet;
     finalResultsOutput += "Dealer has busted! You win!";
   } else {
@@ -438,11 +462,13 @@ var finalResults = function () {
   if (playerChips <= 0) {
     //change mode
     mode = "gameOver";
-    finalResultsOutput += `<br><br>You have ${playerChips} chips remaining.<br>You've run out of chips!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
+    finalResultsOutput += `<br><br>You have ${playerChips} chips remaining.<br>You don't have enough chips to place another bet!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
   } else {
     //change mode
     mode = "dealStartingHand";
-    finalResultsOutput += `<br>You have ${playerChips} chips remaining.<br>Input your bet and click 'Submit' to play again!`;
+    finalResultsOutput += `<br>You have ${playerChips} chips remaining.<br>Input your bet (between ${minimumBet} and ${Math.floor(
+      0.5 * playerChips
+    )}) and click 'Submit' to play again!`;
   }
   return finalResultsOutput;
 };
@@ -473,7 +499,7 @@ var main = function (input) {
     myOutputValue = finalResults();
   } else if (mode == "gameOver") {
     myOutputValue =
-      "You've run out of chips. Please refresh the page to start again.";
+      "You have insufficient chips. Please refresh the page to start again.";
   }
   return myOutputValue;
 };
