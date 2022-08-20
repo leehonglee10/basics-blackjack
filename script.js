@@ -1,12 +1,14 @@
 //global vars
-var playerHand = [];
+var noOfPlayers = 0;
+var currentPlayer = 1;
+var playerHands = [];
 var dealerHand = [];
 var deck = [];
-var playerChips = 100;
-var playerBet = 0;
+var playerChips = [];
+var playerBets = [];
 var minimumBet = 10;
 //please change the minimum bet in the initial output in index.html
-var mode = "dealStartingHand";
+var mode = "inputPlayerNumber";
 
 //==========================================
 //==========================================
@@ -244,47 +246,103 @@ var changeFirstAceTo1 = function (hand) {
 //=============================================
 
 //=============================================
-//deal starting hand func
-var dealStartingHand = function (bet) {
-  //initialise empty output
-  var dealStartingHandOutput = "";
+//Input player number func
+var inputPlayerNumber = function (playerNumber) {
+  //set global var
+  noOfPlayers = playerNumber;
 
-  //set playerBet
-  playerBet = Number(bet);
+  //initialise playerHands, playerChips and playerBets arrays
+  for (let playerIndex = 0; playerIndex < playerNumber; playerIndex++) {
+    playerHands.push([]);
+    playerChips.push(100);
+    playerBets.push(0);
+  }
+
+  //change mode
+  mode = "inputBets";
+
+  //output to ask player1 for bet
+  var inputPlayerNumberOutput = `Number of players set to ${playerNumber}. Player 1, please input your bet (between ${minimumBet} and ${Math.floor(
+    0.5 * playerChips[currentPlayer - 1]
+  )}).`;
+  return inputPlayerNumberOutput;
+};
+
+//=============================================
+//Input bets func
+var inputBets = function (bet) {
+  //initilaise empty output
+  var inputBetsOutput = "";
+
+  //change appropriate element in playerBets
+  playerBets[currentPlayer - 1] = Number(bet);
 
   //input validation for bet, cannot be non-integer, less than minimum bet, more than current chips, or NaN
   if (
-    playerBet % 1 !== 0 ||
-    playerBet < minimumBet ||
-    playerBet > 0.5 * playerChips ||
-    isNaN(playerBet)
+    playerBets[currentPlayer - 1] % 1 !== 0 ||
+    playerBets[currentPlayer - 1] < minimumBet ||
+    playerBets[currentPlayer - 1] > 0.5 * playerChips[currentPlayer - 1] ||
+    isNaN(playerBets[currentPlayer - 1])
   ) {
-    return `Sorry, please input an integer  greater than ${minimumBet} and less than half your remaining chips.<br><br>You have ${playerChips} chips remaining.`;
+    inputBetsOutput += `Sorry, please input an integer greater than ${minimumBet} and less than half your remaining chips.<br><br>You have ${
+      playerChips[currentPlayer - 1]
+    } chips remaining.`;
   } else {
     //minus playerBet away from playerChips
-    playerChips -= playerBet;
+    playerChips[currentPlayer - 1] -= playerBets[currentPlayer - 1];
 
     //output bet
-    dealStartingHandOutput += `You've bet ${playerBet} chips.<br>You have ${playerChips} chips remaining.<br><br>`;
+    inputBetsOutput += `Player ${currentPlayer}, you've bet ${
+      playerBets[currentPlayer - 1]
+    } chips.<br>You have ${
+      playerChips[currentPlayer - 1]
+    } chips remaining.<br><br>`;
+
+    //change player
+    currentPlayer += 1;
+
+    //ask next player for bet, unless currentPlayer > noOfPlayers, in which case change mode and deal starting hand
+    if (currentPlayer <= noOfPlayers) {
+      inputBetsOutput += `Player ${currentPlayer}, please input your bet(between ${minimumBet} and ${Math.floor(
+        0.5 * playerChips[currentPlayer - 1]
+      )}).`;
+    } else {
+      //change mode
+      mode = "dealStartingHand";
+      inputBetsOutput += `Please click 'Submit' to deal your starting hands.`;
+    }
   }
+  return inputBetsOutput;
+};
+
+//=============================================
+//deal starting hand func
+var dealStartingHand = function () {
+  //initialise empty output
+  var dealStartingHandOutput = "";
 
   //reset hands
-  playerHand = [];
+  playerHands = [];
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+    playerHands.push([]);
+  }
   dealerHand = [];
 
   //reset deck
   deck = shuffleCards(makeDeck());
   console.log("deck generated");
 
-  //loop to deal two cards per person, starting with player
-  var counter = 0;
-  while (counter < 2) {
-    playerHand.push(deck.pop());
+  //loop to deal two cards per person, starting with players
+  for (let cardIndex = 0; cardIndex < 2; cardIndex++) {
+    //loop to give one card to each player
+    for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+      playerHands[playerIndex].push(deck.pop());
+    }
+    //deal one card to dealer
     dealerHand.push(deck.pop());
-    counter += 1;
   }
-  console.log("player hand:");
-  console.log(playerHand);
+  console.log("player hands:");
+  console.log(playerHands);
   console.log("dealer hand:");
   console.log(dealerHand);
 
@@ -488,8 +546,11 @@ var main = function (input) {
   console.log("mode:" + mode);
 
   //deal starting hand
-  if (mode == "dealStartingHand") {
-    //output
+  if (mode == "inputPlayerNumber") {
+    myOutputValue = inputPlayerNumber(input);
+  } else if (mode == "inputBets") {
+    myOutputValue = inputBets(input);
+  } else if (mode == "dealStartingHand") {
     myOutputValue = dealStartingHand(input);
   } else if (mode == "playerTurn") {
     myOutputValue = playerTurn(input);
