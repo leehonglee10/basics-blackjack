@@ -466,55 +466,78 @@ var playerInitialTurn = function () {
 //=============================================
 //function for player's turn
 var playerTurn = function (input) {
-  //initialise empty output
-  var playerTurnOutput = "";
+  //initialise output and state whose turn
+  var playerTurnOutput = `Player ${currentPlayer}'s turn.<br><br>`;
 
   //input validation
   if (input !== "hit" && input !== "stand") {
-    playerTurnOutput += `Sorry, please input either 'hit' or 'stand'.<br><br>${listHandsDealerCardHidden()}`;
+    playerTurnOutput += `Sorry, please input either 'hit' or 'stand'.<br><br>${listCurrentTurnHands()}`;
   }
   //split cases if input is hit or stand
   else if (input == "hit") {
+    //just to make things easier, give shorter name to current hand (works because it's just a reference!)
+    var currentHand = playerHands[currentPlayer - 1];
+
     //draw a card
-    playerHand.push(deck.pop());
+    currentHand.push(deck.pop());
 
     //output
     playerTurnOutput += `You hit and drew ${
-      playerHand[playerHand.length - 1].name
-    } of ${playerHand[playerHand.length - 1].suit}.<br><br>`;
+      currentHand[currentHand.length - 1].name
+    } of ${currentHand[currentHand.length - 1].suit}.<br><br>`;
 
     //if bust, try changing ace to 1
-    if (checkValueOfHand(playerHand) > 21) {
-      changeFirstAceTo1(playerHand);
+    if (checkValueOfHand(currentHand) > 21) {
+      changeFirstAceTo1(currentHand);
     }
 
-    playerTurnOutput += listHandsDealerCardHidden();
+    playerTurnOutput += listCurrentTurnHands();
 
-    //if busted, lose
-    if (checkValueOfHand(playerHand) > 21) {
-      playerTurnOutput += `You busted! Dealer wins.`;
-      //check if player ran out of chips
-      if (playerChips <= minimumBet) {
+    //if busted, change player and mode
+    if (checkValueOfHand(currentHand) > 21) {
+      playerTurnOutput += `You busted! Dealer wins.<br><br>You have ${
+        playerChips[currentPlayer - 1]
+      } chips remaining.<br><br>`;
+
+      //change player
+      currentPlayer += 1;
+
+      //if all players have had their turns, move onto dealer turn
+      if (currentPlayer > noOfPlayers) {
+        //change mode and player
+        currentPlayer = 1;
+        mode = "dealerTurn";
+        playerTurnOutput += `Click 'Submit' to proceed to dealer's turn.`;
+      }
+      //else, ask next player to input their
+      else {
         //change mode
-        mode = "gameOver";
-        playerTurnOutput += `<br><br>You have ${playerChips} chips remaining.<br>You don't have enough chips to place another bet!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
-      } else {
-        //change mode
-        mode = "dealStartingHand";
-        playerTurnOutput += `<br><br>You have ${playerChips} chips remaining.<br>Please place your bet for the next round! (between ${minimumBet} and ${Math.floor(
-          0.5 * playerChips
-        )})`;
+        mode = "playerInitialTurn";
+        playerTurnOutput += `Click 'Submit' to proceed to player ${currentPlayer}'s turn.`;
       }
     }
-    //else ask player for hit or stand, and leave mode unchanged
+    //else not busted, ask player for hit or stand, and leave mode unchanged
     else {
       playerTurnOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
     }
   }
-  //if stand, output final value of hand and change mode
+  //if stand, output final value of hand, change player and mode
   else if (input == "stand") {
-    playerTurnOutput = `You stood.<br><br>${listHandsDealerCardHidden()}Click 'Submit' to move on to dealer's turn.`;
-    mode = "dealerTurn";
+    playerTurnOutput += `You stood.<br><br>${listCurrentTurnHands()}`;
+    currentPlayer += 1;
+    //if all players have had their turns, move onto dealer turn
+    if (currentPlayer > noOfPlayers) {
+      //change mode and player
+      currentPlayer = 1;
+      mode = "dealerTurn";
+      playerTurnOutput += `Click 'Submit' to proceed to dealer's turn.`;
+    }
+    //else, ask next player to input their
+    else {
+      //change mode
+      mode = "playerInitialTurn";
+      playerTurnOutput += `Click 'Submit' to proceed to player ${currentPlayer}'s turn.`;
+    }
   }
   return playerTurnOutput;
 };
@@ -545,7 +568,7 @@ var dealerTurn = function () {
   }
 
   //list hands
-  dealerTurnOutput += listHandsDealerCardHidden();
+  dealerTurnOutput += listAllHandsDealerCardHidden();
 
   //tell player to move on to final results
   dealerTurnOutput += "Click 'Submit' to check final results.";
