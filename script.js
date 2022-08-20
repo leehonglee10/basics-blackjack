@@ -8,6 +8,8 @@ var playerChips = [];
 var playerBets = [];
 var minimumBet = 10;
 //please change the minimum bet in the initial output in index.html
+var playerBlackjacks = [];
+var playerBusts = [];
 var mode = "inputPlayerNumber";
 
 //==========================================
@@ -169,27 +171,69 @@ var handToStringDealerCardHidden = function (hand) {
 
 //=============================================
 //func to list out hands and point values
-var listHands = function () {
-  var listHandsOutput = `Your hand: ${handToString(
-    playerHand
-  )} (${checkValueOfHand(playerHand)} points)<br>Dealer hand: ${handToString(
+var listAllHands = function () {
+  //initialise empty output
+  var listHandsOutput = "";
+  //loop to output players' hands
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+    listHandsOutput += `<br>Player ${playerIndex + 1}'s hand: ${handToString(
+      playerHands[playerIndex]
+    )} (${checkValueOfHand(playerHands[playerIndex])} points)`;
+    if (playerBlackjacks[playerIndex]) {
+      listHandsOutput += `(BLACKJACK)`;
+    } else if (playerBusts[playerIndex]) {
+      listHandsOutput += `(BUST)`;
+    }
+  }
+  listHandsOutput += `<br><br>Dealer hand: ${handToString(
     dealerHand
   )} (${checkValueOfHand(dealerHand)} points)<br><br>`;
-
   return listHandsOutput;
 };
 
 //=============================================
 //func to list out hands and point values HIDING DEALER FIRST CARD
-var listHandsDealerCardHidden = function () {
-  var listHandsOutput = `Your hand: ${handToString(
-    playerHand
-  )} (${checkValueOfHand(
-    playerHand
-  )} points)<br>Dealer hand: ${handToStringDealerCardHidden(
+var listAllHandsDealerCardHidden = function () {
+  //initialise empty output
+  var listHandsOutput = "";
+  //loop to output players' hands
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+    listHandsOutput += `Player ${playerIndex + 1}'s hand: ${handToString(
+      playerHands[playerIndex]
+    )} (${checkValueOfHand(playerHands[playerIndex])} points)<br>`;
+  }
+  listHandsOutput += `<br>Dealer hand: ${handToStringDealerCardHidden(
     dealerHand
   )} (??? points)<br><br>`;
   return listHandsOutput;
+};
+
+//=============================================
+//func to list out current player and dealer hands and point values HIDING DEALER FIRST CARD
+var listCurrentTurnHands = function () {
+  //initialise empty output
+  var listHandsOutput = "";
+  //current player's hand
+  listHandsOutput += `Your hand: ${handToString(
+    playerHands[currentPlayer - 1]
+  )} (${checkValueOfHand(playerHands[currentPlayer - 1])} points)<br>`;
+  listHandsOutput += `Dealer hand: ${handToStringDealerCardHidden(
+    dealerHand
+  )} (??? points)<br><br>`;
+  return listHandsOutput;
+};
+
+//=============================================
+//func to list out players' remaining chips
+var listChips = function () {
+  //initialise empty output
+  var listChipsOutput = "";
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+    listChipsOutput += `Player ${playerIndex + 1} has ${
+      playerChips[playerIndex]
+    } chips remaining.<br>`;
+  }
+  return listChipsOutput;
 };
 
 //=============================================
@@ -251,18 +295,20 @@ var inputPlayerNumber = function (playerNumber) {
   //set global var
   noOfPlayers = playerNumber;
 
-  //initialise playerHands, playerChips and playerBets arrays
-  for (let playerIndex = 0; playerIndex < playerNumber; playerIndex++) {
+  //initialise playerHands, playerChips, playerBets, playerBlackjacks and playerBusts arrays
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
     playerHands.push([]);
     playerChips.push(100);
     playerBets.push(0);
+    playerBlackjacks.push(false);
+    playerBusts.push(false);
   }
 
   //change mode
   mode = "inputBets";
 
   //output to ask player1 for bet
-  var inputPlayerNumberOutput = `Number of players set to ${playerNumber}. Player 1, please input your bet (between ${minimumBet} and ${Math.floor(
+  var inputPlayerNumberOutput = `Number of players set to ${noOfPlayers}. Player 1, please input your bet (between ${minimumBet} and ${Math.floor(
     0.5 * playerChips[currentPlayer - 1]
   )}).`;
   return inputPlayerNumberOutput;
@@ -303,10 +349,12 @@ var inputBets = function (bet) {
 
     //ask next player for bet, unless currentPlayer > noOfPlayers, in which case change mode and deal starting hand
     if (currentPlayer <= noOfPlayers) {
-      inputBetsOutput += `Player ${currentPlayer}, please input your bet(between ${minimumBet} and ${Math.floor(
+      inputBetsOutput += `Player ${currentPlayer}, please input your bet (between ${minimumBet} and ${Math.floor(
         0.5 * playerChips[currentPlayer - 1]
       )}).`;
     } else {
+      //reset current player to 1
+      currentPlayer = 1;
       //change mode
       mode = "dealStartingHand";
       inputBetsOutput += `Please click 'Submit' to deal your starting hands.`;
@@ -346,52 +394,73 @@ var dealStartingHand = function () {
   console.log("dealer hand:");
   console.log(dealerHand);
 
+  dealStartingHandOutput += `Starting hand dealt.<br><br>`;
+
   //check for blackjack
-  var playerBlackjack = checkForBlackjack(playerHand);
+  for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+    playerBlackjacks[playerIndex] = checkForBlackjack(playerHands[playerIndex]);
+  }
   var dealerBlackjack = checkForBlackjack(dealerHand);
 
-  //output both players' hands, hiding dealer card if no blackjack
+  //output players' hands, hiding dealer card if no blackjack
   if (dealerBlackjack) {
-    dealStartingHandOutput += listHands();
+    dealStartingHandOutput += listAllHands();
+
+    dealStartingHandOutput += `Dealer has blackjack! All players who do not also have blackjack lose double their bet! Players who also have blackjack draw and are returned their bets.<br><br>`;
+
+    //calculate bets
+    //loop through each player to check if they have blackjack
+    for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+      //if they have blackjack, return their bet
+      if (playerBlackjacks[playerIndex]) {
+        playerChips[playerIndex] += playerBets[playerIndex];
+      }
+      //otherwise, subtract their bet's worth of chips
+      else {
+        playerChips[playerIndex] -= playerBets[playerIndex];
+      }
+    }
+
+    //list chips
+    dealStartingHandOutput += listChips();
+
+    //change mode to input bets and ask player 1 for bet
+    mode = "inputBets";
+    dealStartingHandOutput += `<br>Player 1, please input your bet for the next round (between ${minimumBet} and ${Math.floor(
+      0.5 * playerChips[currentPlayer - 1]
+    )}).`;
   } else {
-    dealStartingHandOutput += listHandsDealerCardHidden();
-  }
+    dealStartingHandOutput += listAllHandsDealerCardHidden();
 
-  //if anyone has blackjack
-  if (playerBlackjack == true || dealerBlackjack == true) {
-    //split by cases of who has blackjack
-    if (playerBlackjack == true && dealerBlackjack == true) {
-      playerChips += playerBet;
-      dealStartingHandOutput += `Both you and the dealer have blackjack! It's a draw!`;
-    } else if (playerBlackjack == true && dealerBlackjack == false) {
-      playerChips += 3 * playerBet;
-      dealStartingHandOutput += `You have blackjack! You win!`;
-    } else if (playerBlackjack == false && dealerBlackjack == true) {
-      playerChips -= playerBet;
-      dealStartingHandOutput += `Dealer has blackjack! Dealer wins.`;
+    //list players with blackjack and say bets will be settled on their turn
+    //loop through blackjacks array and append output if true
+    for (let playerIndex = 0; playerIndex < noOfPlayers; playerIndex++) {
+      if (playerBlackjacks[playerIndex]) {
+        dealStartingHandOutput += `Player ${
+          playerIndex + 1
+        }, you've got blackjack! Your winnings will be calculated on your turn.<br><br>`;
+      }
     }
-
-    //check if player ran out of chips
-    if (playerChips <= minimumBet) {
-      //change mode
-      mode = "gameOver";
-      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>You don't have enough chips to place another bet!<br><br>GAME OVER<br><br>Please refresh the page to restart!`;
-    } else {
-      //mode remains dealStartingHand
-      dealStartingHandOutput += `<br><br>You have ${playerChips} chips remaining.<br>Input your bet (between ${minimumBet} and ${Math.floor(
-        0.5 * playerChips
-      )}) and click 'Submit' to play again!`;
-    }
-  }
-  //if no one has blackjack, output values of hands and ask player for hit or stand
-  else {
-    dealStartingHandOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
 
     //change mode
-    mode = "playerTurn";
+    mode = "playerInitialTurn";
+    //ask to move to player 1's inital turn
+    dealStartingHandOutput += `Please click 'Submit' to proceed to Player ${currentPlayer}'s turn.`;
   }
 
   return dealStartingHandOutput;
+};
+
+//=============================================
+//function for player's inital turn
+var playerInitialTurn = function () {
+  //initialise empty output
+  var playerInitialTurnOutput = "";
+  playerInitialTurnOutput += `Player ${currentPlayer}'s turn.<br><br>${listCurrentTurnHands()}`;
+  playerInitialTurnOutput += `Would you like to hit or stand?<br>Input 'hit' to hit and 'stand' to stand.`;
+  //change mode
+  mode = "playerTurn";
+  return playerInitialTurnOutput;
 };
 
 //=============================================
@@ -551,7 +620,9 @@ var main = function (input) {
   } else if (mode == "inputBets") {
     myOutputValue = inputBets(input);
   } else if (mode == "dealStartingHand") {
-    myOutputValue = dealStartingHand(input);
+    myOutputValue = dealStartingHand();
+  } else if (mode == "playerInitialTurn") {
+    myOutputValue = playerInitialTurn();
   } else if (mode == "playerTurn") {
     myOutputValue = playerTurn(input);
   } else if (mode == "dealerTurn") {
